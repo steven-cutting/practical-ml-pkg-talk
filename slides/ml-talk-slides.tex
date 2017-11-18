@@ -1,0 +1,1010 @@
+\documentclass[10pt]{beamer}
+\usepackage[utf8]{inputenc}
+
+\usetheme{metropolis}
+\usepackage{appendixnumberbeamer}
+
+\usepackage{booktabs}
+\usepackage[scale=2]{ccicons}
+
+\usepackage{pgfplots}
+\usepgfplotslibrary{dateplot}
+
+\usepackage{xspace}
+\newcommand{\themename}{\textbf{\textsc{metropolis}}\xspace}
+
+\usepackage{csquotes}
+\usepackage{minted}
+\usemintedstyle{trac}
+% \usepackage{animate}
+% \usepackage{media9}
+
+
+
+
+
+
+\title{Practical Packaging For Machine Learning Solutions}
+% \subtitle{A modern beamer theme}
+\date{\today}
+\author{Steven Cutting}
+% \institute{Center for modern beamer themes}
+\titlegraphic{\hfill\includegraphics[height=1.5cm]{images/the-boss-cat-logo.png}}
+
+
+
+\begin{document}
+
+
+
+\maketitle
+
+
+
+\begin{frame}{Table of contents}
+  \setbeamertemplate{section in toc}[sections numbered]
+  \tableofcontents[hideallsubsections]
+  % \tableofcontents
+\end{frame}
+
+
+
+
+
+
+% =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+% =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+
+\section{Introduction}
+
+%% \begin{frame}[fragile]{What/Why}
+
+%%   \begin{itemize}
+%%     \item Do you have machine learning models written in Python that you would like to share with other people (e.g. clients, co-workers, etc.)?
+
+%%     \item It will be easier to share projects by learning how to create our own pip installable packages.
+%%     \item Deployment/Sharing tools are general purpose and are not specific to anyone machine learning framework.
+%%       \begin{itemize}
+%%         \item Provides a consistent, dependable, and extensible solution across projects.
+%%       \end{itemize}
+%%   \end{itemize}
+  
+%% \end{frame}
+
+\begin{frame}[fragile]{What/Why}
+
+  \textbf{Why learn about Python Packaging?}
+  \begin{itemize}
+    \item Pythons deployment and sharing tools are general purpose.
+      \begin{itemize}
+        \item Not specific to anyone machine learning framework.
+        \item Not dependent upon a proprietary service.
+        \item Use with \textbf{Docker}. Can \textbf{deploy to servers} in the `Cloud'.
+        \item Provide a consistent, dependable, and extensible solution across projects.
+      \end{itemize}
+    \item Make sharing and deployment easier.
+  \end{itemize}
+  
+\end{frame}
+
+\begin{frame}[fragile]{Our target outcome}
+
+  % Try not to repeat info from ToC 
+
+  \begin{itemize}
+    \item We should leave with a basic understanding of the tools and best practices for Python packaging.
+
+    \item How we can leverage that knowledge for use in our specific domain.
+  \end{itemize}
+
+\end{frame}
+
+\begin{frame}[fragile]{What I assume about you}
+
+  \begin{itemize}
+    \item You know and \textit{LOVE} \textbf{Python}.
+    \item That you have used \textbf{pip} or at least conda.
+    \item You have some understanding of the issues facing machine learning projects.
+      \begin{itemize}
+        \item This is not strictly necessary, but will help give context.
+      \end{itemize}
+  \end{itemize}
+
+\end{frame}
+
+\begin{frame}[fragile]{What is a machine learning solution}
+
+  \textbf{For our purposes a machine learning solution is:}
+
+  \begin{itemize}
+    \item It is a project that provides a model fitted on data for use by others.
+    \item It includes the code necessary to \textbf{build the model}, the model, and an interface to use it.
+    \item Nothing else. The solution can later be incorporated into an application, such as a web service.
+  \end{itemize}
+
+\end{frame}
+
+\begin{frame}[fragile]{Packaging in Data-Science}
+
+  \begin{itemize}
+    \item \textit{``If it's so great why don't I hear more about it?''}
+      \begin{itemize}
+        \item Packaging is used, but not commonly talked about.
+        \item It's not a sexy subject (it's not \texttt{TensorFlow}).
+      \end{itemize}
+  \end{itemize}
+  
+\end{frame}
+
+
+\begin{frame}[fragile]{Packaging in Data-Science: Things to note}
+
+  \begin{itemize}
+    % Work on wording
+    % \item For machine learning use cases there are not many agreed upon best practices.
+    \item For the most part I have drawn from general software engineering best practices.
+    \item Therefore I have done my best, by drawing on my industry experience, to extend the general best practices to cover this use case.
+  \end{itemize}
+  
+\end{frame}
+
+
+
+
+
+
+
+% =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+% =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+
+\section{Python Packaging Basics}
+
+\begin{frame}[fragile]{Just Enough}
+
+  Here we are going to cover just enough of Python packaging basics as they relate to machine learning projects, so we can have the required background needed for the rest of the talk.
+  
+\end{frame}
+
+\begin{frame}[fragile]{Package Vs. Distribution Package}
+
+  \textbf{From the Python Packaging Authority (PyPA)}
+
+  \begin{displayquote}
+    \textbf{Import Package}
+
+    A Python module which can contain other modules or recursively, other packages.
+  \end{displayquote}
+
+  \begin{displayquote}
+    \textbf{Distribution Package}
+
+    A versioned archive file that contains Python packages, modules, and other resource files that are used to distribute a Release. The archive file is what an end-user will download from the internet and install.
+  \end{displayquote}
+  
+
+\end{frame}
+
+\begin{frame}[fragile]{Project Requirements}
+
+  \begin{minted}{text}
+    basic_project/
+    ├── setup.py
+    ├── README.rst
+    ├── LICENSE.txt
+    └── package/
+        ├── __init__.py
+        └── data/
+            └── model_file.pickle
+  \end{minted}
+
+\end{frame}
+
+\begin{frame}[fragile]{Project Requirements: \texttt{setup.py}}
+
+  \begin{minted}{python}
+    setup(
+        name="iris_classifier",
+        version="1.0.0",
+
+        packages=find_packages(),
+        python_requires=">=3.6, <4",
+        install_requires=['scikit-learn>=0.18,<0.19',
+                          'setuptools>=36,<37'],
+        package_data={'': ['data/model_file.pickle']},
+        )
+  \end{minted}
+  \textit{* More arguments are required to upload to PyPI.}
+\end{frame}
+
+\begin{frame}[fragile]{Source Distribution}
+
+  To create an archive that we can share with others we can create a \textbf{Source Distribution} package using everything we setup previously.
+
+  \textit{(Or a Wheel)}
+
+\end{frame}
+
+\begin{frame}[fragile]{Source Distribution: Definition}
+  \textbf{From the Python Packaging Authority (PyPA)}
+  \begin{displayquote}
+    \textbf{Source Distribution (or “sdist”)}
+    
+    A distribution format (usually generated using python setup.py sdist) that provides metadata and the essential source files needed for installing by a tool like pip, or for generating a Built Distribution.
+  \end{displayquote}
+\end{frame}  
+
+\begin{frame}[fragile]{Source Distribution: Creation and Installation}
+
+  For a guide on how to create and install source distribution packages:
+
+  \textbf{ml-pkg-post.blog.stevencutting.com\#packing-it-up}
+
+\end{frame}
+
+%% \begin{frame}[fragile]{Source Distribution: Creation}
+
+%%   In the directory where the \texttt{setup.py} files is, run
+
+%%   \begin{verbatim}
+%%     python setup.py sdist
+%%   \end{verbatim}
+
+%%   to create the source distribution package.
+
+%%   The output archive will be in a new directory named \texttt{dist/}.
+
+%% \end{frame}
+
+%% \begin{frame}[fragile]{Source Distribution: Installation}
+
+%%   To install the package, call \texttt{pip install} on the distribution package we created.
+
+%%   \begin{verbatim}
+%%     pip install iris_classifier-1.0.0.tar.gz
+%%   \end{verbatim}
+
+%% \end{frame}
+
+\begin{frame}[fragile]{Distributing it}
+
+  \begin{itemize}
+    \item \textbf{Email}
+
+      We can simply email our users the distribution package file. Don't always overthink it.
+
+    \item \textbf{PyPI}
+
+      Upload it to PyPI. Make it publicly available.
+
+    \item \textbf{Private package repository}
+
+      Upload it to your client/companies private PyPI instance, so it won't be publicly available.
+  \end{itemize}
+
+\end{frame}
+
+\begin{frame}[fragile]{Deep-dive}
+
+  For a deep-dive how-to:
+
+  \textbf{ml-pkg-post.blog.stevencutting.com}
+  
+\end{frame}
+
+
+
+
+% =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+% =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+
+\section{Project Packaging Schemes}
+
+
+\begin{frame}[fragile]{Some suggested packaging schemes}
+
+  These schemes are not meant to be rigidly followed, but adjusted where needed to better fit unique problems.
+
+\end{frame}
+
+
+% =-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+
+\subsection{Single package scheme}
+
+\begin{frame}[fragile]{Single package scheme}
+
+  \begin{itemize}
+    \item This is the simplest approach, in which we place everything in a single package.
+    \item The code to fit the model, the model, and the API code.
+   \end{itemize}
+
+\end{frame}
+
+\begin{frame}[fragile]{Single package scheme: structure}
+
+  \begin{verbatim}
+    single_pkg_project/
+    ├── pkg/
+    │   ├── __init__.py
+    │   └── data/
+    │       └── modle_file.pickle
+    └── setup.py
+  \end{verbatim}
+
+\end{frame}
+
+%% \begin{frame}[fragile]{Single package scheme: classifier example}
+
+%%   % Probably just leave out
+%%   \begin{itemize}
+%%     \item
+%%     \item
+%%     \item
+%%   \end{itemize}
+
+%% \end{frame}
+
+\begin{frame}[fragile]{Single package scheme: Pros/Cons}
+
+  \begin{itemize}
+    \item \textbf{Pros}
+      \begin{itemize}
+        \item It's simple.
+        \item There is only one package to manage and ship and it includes everything.
+      \end{itemize}
+
+    \item \textbf{Cons}
+      \begin{itemize}
+        \item When we make updates to our model and any of the code, we must ship everything all over again.
+        \item We can not version the model itself separately from the API.
+      \end{itemize}
+  \end{itemize}
+
+\end{frame}
+
+
+% =-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+
+%% \subsection{Two package scheme}
+
+%% \begin{frame}[fragile]{Two package scheme}
+
+%%   \textbf{Basically, we split the project into two sub-projects:}
+%%   \begin{itemize}
+%%     \item \texttt{fit\_model}
+%%     \item \texttt{use\_model}
+%%   \end{itemize}
+
+%% \end{frame}
+
+%% \begin{frame}[fragile]{Two package scheme: structure}
+
+%%   \begin{verbatim}
+%%     two_pkg_project/
+%%     ├── pkg_fit_model/
+%%     │   ├── pkg_fit_model/
+%%     │   │   └── __init__.py
+%%     │   └── setup.py
+%%     └── pkg_use_model/
+%%         ├── pkg_use_model/
+%%         │   ├── __init__.py
+%%         │   └── data/
+%%         │       └── model_file.pickle
+%%         └── setup.py
+%%   \end{verbatim}
+
+%% \end{frame}
+
+%% \begin{frame}[fragile]{Two package scheme: Pros/Cons}
+
+%%   \begin{itemize}
+%%     \item \textbf{Pros}
+%%       \begin{itemize}
+%%         \item We no longer have to ship the API and model with the model fitting code. 
+%%       \end{itemize}
+
+%%     \item \textbf{Cons}
+%%       \begin{itemize}
+%%         \item Updates to the model and API are still fully coupled.
+%%       \end{itemize}
+%%   \end{itemize}
+
+%% \end{frame}
+
+
+% =-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+
+\subsection{Three package scheme}
+
+\begin{frame}[fragile]{Three package scheme}
+
+  \textbf{We split the project into three packages:}
+  \begin{enumerate}
+    \item \texttt{model\_create}
+    \item \texttt{model}
+    \item \texttt{model\_api}
+  \end{enumerate}
+\end{frame}
+
+\begin{frame}[fragile]{Three package scheme: \texttt{model\_create}}
+  
+  \texttt{model\_create}
+  \begin{itemize}
+    \item The code used to create the model.
+    \item Preprocessing code.
+  \end{itemize}
+
+\end{frame}
+
+\begin{frame}[fragile]{Three package scheme: \texttt{model}}
+  
+  \texttt{model}
+  \begin{itemize}        
+    \item It should be the model file(s) and just enough code to load the model.
+    \item It should only be single model.
+    \item It will allow you to easily version the model.
+      %% \begin{itemize}
+      %%   \item using semantic versioning would be a great idea
+      %%   \item 1.1.* - only changes that do not affect the consumer.
+      %%   \item 1.*.1 - miner improvements and fixes. The api should still be backwards compatible.
+      %%   \item *.1.1 - major changes
+      %% \end{itemize}
+  \end{itemize}
+
+\end{frame}
+
+\begin{frame}[fragile]{Three package scheme: \texttt{model\_api}}
+
+  \texttt{model\_api}
+  \begin{itemize}
+    % \item Code that actually makes use of the model. Offers an API to users of the model.
+    \item The API
+    \item Includes everything that actually surrounds the use of the model.
+      \begin{itemize}
+        \item Data preprocessing/transformation.
+        \item Transforming model output.
+        \item Orchestration of application steps.
+        \item Input/Output validation.
+        \item etc.
+      \end{itemize}
+  \end{itemize} 
+
+\end{frame}
+
+\begin{frame}[fragile]{Three package scheme: But why?}
+
+  What do we get from this?
+  \begin{itemize}
+    \item We can version our training code, model, and API separately.
+    \item Update and deploy parts independently.
+    \item etc.
+  \end{itemize}
+\end{frame}
+
+\begin{frame}[fragile]{Three package scheme: Why - A scenario}
+
+  \textbf{Imagine:}
+  \begin{itemize} 
+    \item You have a 3Gig model file.
+    \item You make a small bug fix to the API code.
+    \item With the 3 package scheme you won't have to repackage and ship the model. Just the API.
+  \end{itemize}
+\end{frame}
+
+\begin{frame}[fragile]{Three package scheme: structure}
+
+  \begin{verbatim}
+    three_pkg_project/
+    ├── fit_model_pkg/
+    │   ├── fit_model_pkg/
+    │   │   └── __init_.py
+    │   └── setup.py
+    ├── model_api_pkg/
+    │   ├── model_api_pkg/
+    │   │   └── __init__.py
+    │   └── setup.py
+    └── model_pkg/
+        ├── model_pkg/
+        │   ├── __init__.py
+        │   └── data/
+        │       └── model_file.pickle
+        └── setup.py
+  \end{verbatim}
+
+\end{frame}
+
+%% \begin{frame}[fragile]{Three package scheme: classifier scenario}
+
+%%   blah
+
+%% \end{frame}
+
+%% \begin{frame}[fragile]{Three package scheme: classifier with custom scenario}
+
+%%   Lets say you have a logistic regression model that you use as your classifier. It may be the case that you may want to define a custom cutoff point.
+
+%%   This cutoff configuration should go with the model.
+
+%% \end{frame}
+
+\begin{frame}[fragile]{Three package scheme: Pros/Cons}
+
+  \begin{itemize}
+    \item \textbf{Pros}
+      \begin{itemize}
+        \item The model and API can be versioned separately.
+        % \item Allows for full separation of tests for different parts of the project.
+        \item User can easily swap in different models without messing with the API package.
+      \end{itemize}
+
+    \item \textbf{Cons}
+      \begin{itemize}
+        \item More complex.
+        \item We will need to build and ship at least two packages.
+      \end{itemize}
+  \end{itemize}
+
+\end{frame}
+
+
+% =-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+
+\subsection{N-package scheme}
+
+\begin{frame}[fragile]{N-package scheme}
+
+  \begin{itemize}
+    \item For projects that contain multiple models.
+
+    \item It can contain multiple \texttt{model\_create} packages for each model that needs to be created.
+
+    \item Each model should have its own package that only handles loading the model file(s).
+
+    \item There should only be one \texttt{apply\_model} package, otherwise consider not including it.
+  \end{itemize}
+
+\end{frame}
+
+%% \begin{frame}[fragile]{N-package scheme: structure}
+
+%%   % not a good approach find another way
+%%   \begin{verbatim}
+%%     three_pkg_project
+%%     ├── fit_model_pkg
+%%     │   ├── fit_model_pkg
+%%     │   │   └── __init_.py
+%%     │   └── setup.py
+%%     ├── model_api_pkg
+%%     │   ├── model_api_pkg
+%%     │   │   └── __init__.py
+%%     │   └── setup.py
+%%     ├── model_pkg_0
+%%     │   ├── model_pkg_0
+%%     │   │   ├── __init__.py
+%%     │   │   └── data
+%%     │   │       └── model_0_file.pickle
+%%     │   └── setup.py
+%%     └── model_pkg_1
+%%         ├── model_pkg_1
+%%         │   ├── __init__.py
+%%         │   └── data
+%%         │       └── model_1_file.pickle
+%%         └── setup.py
+%%   \end{verbatim}
+
+%% \end{frame}
+
+%% \begin{frame}[fragile]{N-package scheme: topic model with index example}
+
+%%   Sometimes we generate more than just model files. This is often be the case in domains such as topic modeling where we may have an index that was generated by the model.
+
+%% \end{frame}
+
+\begin{frame}[fragile]{N-package scheme: topic model with classifier example}
+
+  \textbf{Using a topic model as dimensionality reduction step for a classifier.}
+  \begin{itemize}
+    \item The code used to fit the topic model and classifier should go in different packages.
+    \item The models can go in their own packages. They can be released separately.
+      \begin{itemize}
+        \item This way if the classifier is updated but the topic model is not, only the classifier has to be shipped. The topic model can be left alone.
+        \item Note, this does not work in the reverse.
+      \end{itemize}
+    \item The classifier training package will depend upon the topic model package.
+    \item The models will be composed in the API package.
+  \end{itemize}
+
+\end{frame}
+
+\begin{frame}[fragile]{N-package scheme: Pros/Cons}
+
+  \begin{itemize}
+    \item \textbf{Pros}
+      \begin{itemize}
+        \item Allows you to have and version multiple models and model fitting code.
+      \end{itemize}
+
+    \item \textbf{Cons}
+      \begin{itemize}
+        \item Even more complex.
+        \item We will need to build and ship a bunch of packages.
+        \item There may be a lot of duplicate code/effort (hint: there is a solution).
+      \end{itemize}
+  \end{itemize}
+
+\end{frame}
+
+
+
+
+
+% =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+% =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+
+\section{Tips and best practices}
+
+
+% =-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+
+\subsection{Shared Code In Multi-Package Project}
+
+\begin{frame}[fragile]{Multi-Package Shared Code: Problem}
+
+  \begin{itemize}
+    \item \textbf{What to do about code we want to use in multiple packages?}
+    \item \textit{e.g. Preprocessing code that may be used in the model training step and when applying the model.}
+  \end{itemize}
+\end{frame}
+
+\begin{frame}[fragile]{Multi-Package Shared Code: Solution}
+
+  \begin{itemize}
+    \item \textbf{Place shared code in facet specific packages.}
+    \item \textit{Example: Place preprocessing code in it's own package and provide it as a dependency to the training package and the API package.}
+  \end{itemize}
+
+\end{frame}
+
+\begin{frame}[fragile]{Multi-Package Shared Code: Suggestions}
+  \begin{itemize}
+    \item \textbf{Avoid bad dependency patterns}
+      \begin{itemize}
+        \item e.g. circular dependencies
+      \end{itemize}
+  \end{itemize}
+
+\end{frame}
+
+\begin{frame}[fragile]{Multi-Package Shared Code: Suggestions cont.}
+  \begin{itemize}
+    \item \textbf{Listing our other packages in the project as dependencies:}
+      \begin{itemize}
+        \item List a lower boundary on the version number.
+        \item Consider not specifying an upper-boundary.
+        \item \textit{A lot of the benefit gained from splitting up the project will be lost if you are too restrictive with the dependency versions.}
+      \end{itemize}
+  \end{itemize}
+\end{frame}
+
+
+
+% =-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+
+\subsection{Fragmented project}
+
+\begin{frame}[fragile]{Fragmented project: Growing number of packages}
+
+  How are we going to handle the growing number of packages in a sane way?
+
+\end{frame}
+
+%% \begin{frame}[fragile]{Fragmented project: \"Uber Archive Distribution}
+%%   % Change title, to less lame
+
+%%   % split slide up
+
+%%   If we plan on emailing our distribution package to our users, using \texttt{make} can help automate much of the process.
+
+%%   \begin{itemize}
+%%     \item To create an archive distribution, we can use \texttt{make} to automatically:
+%%       \begin{enumerate}
+%%         \item create source distribution packages for all of our sub-projects
+%%         \item copy them into a single directory
+%%         \item place an installation \texttt{make} file the directory
+%%           \begin{itemize}
+%%             \item The \texttt{make} file should contain commands for installing all of the distribution packages.
+%%           \end{itemize}
+%%         \item then create an archive of the directory
+%%       \end{enumerate}
+%%     \item To install the archive distribution
+%%       \begin{enumerate}
+%%         \item Unpack the archive.
+%%         \item Run the above mentioned \texttt{make} file that was placed in the archive.
+%%       \end{enumerate}
+%%   \end{itemize}
+
+%%   %% \begin{itemize}
+%%   %%   \item Cover using \texttt{make} files to build a multi-package distribution.
+%%   %%   \item Cover using \texttt{make} to install a multi-package distribution.
+%%   %% \end{itemize}
+  
+%% \end{frame}
+
+\begin{frame}[fragile]{Fragmented project: Remote repository - Create and Distribute}
+  % If you are using PyPI or something similar.
+
+  \textbf{Creating and Distributing}
+  \begin{enumerate}
+    \item Create a template project with a \texttt{setup.py} file and use that as the base for each new subproject.
+    \item Build and upload the packages as you finish coding them. The same is true for updates.
+  \end{enumerate}
+  
+\end{frame}
+
+\begin{frame}[fragile]{Fragmented project: Remote repository - Installation - Option 1}
+
+  \textbf{Option 1}
+
+  \begin{itemize}
+    \item We can provide our user with a \texttt{requirements.txt} file with all of the required packages listed it.
+    \item This can be very useful as it allow us to provide the locations of each package.
+      \begin{itemize}
+        \item e.g. a URI pointing to a git repository or a private package repository.
+      \end{itemize}
+  \end{itemize}
+  
+\end{frame}
+
+\begin{frame}[fragile]{Fragmented project: Remote repository - Installation - Option 2}
+
+  \textbf{Option 2}
+
+  \begin{itemize}
+    \item Have all of your packages that need to be installed listed as dependencies in the API packages \texttt{setup.py} file.
+    \item This will cause pip to automatically fetch and install all of the other packages.
+  \end{itemize}
+
+\end{frame}
+
+\begin{frame}[fragile]{Fragmented project: Remote repository - Installation - Preferred}
+
+  Using \texttt{setup.py} (Option 2) is the preferred method.
+  \begin{itemize}
+    \item Especially if our project is not an end application, but a distribution package.
+    \item All dependencies are listed in one location.
+    \item We should avoid providing locations of packages. (Leave this to the end application maintainers)
+  \end{itemize}
+\end{frame}
+
+
+% =-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+
+\subsection{Notes on Handling Data}
+
+\begin{frame}[fragile]{Handling Data}
+
+  \begin{itemize}
+    \item PyPI
+      \begin{itemize}
+        \item Package size limit is around 60MB (increase can be requested).
+          \begin{itemize}
+            \item If your model package is over 60MB, don't include the model file in the package.
+            \item Host the model file somewhere else.
+            % being removed per PEP 470 \item Host the package elsewhere and supply PyPI with a pointer.
+          \end{itemize}
+      \end{itemize}
+    \item Using git version control
+      \begin{itemize}
+        \item If a package size is over 1GB, consider excluding the model file from git versioning.
+          %% \begin{itemize}
+          %%   \item 
+          %% \end{itemize}
+      \end{itemize}
+  \end{itemize}
+
+\end{frame}
+
+
+\begin{frame}[fragile]{Handling Data: Training Data}
+  \begin{itemize}
+    \item Training Data
+      \begin{itemize}
+        % \item If it is stored locally, don't include it in the projects version control or distribution package.
+        % \item Unless you are planing on sharing/distributing the model fitting code, what you do with the training data won't matter as much as what you do with the fitted model files.
+        \item Shouldn't be included in the package.
+        \item To make it available to users consider including a way to download it.
+      \end{itemize}
+    % \item Package Data files (e.g. models, parameter files, etc.).
+  \end{itemize}
+
+\end{frame}
+
+%% \begin{frame}[fragile]{Handling Data: Cont.}
+
+%%   % Any non-Python or package metadata files that should be versioned with the rest of the package.
+%%   \begin{itemize}
+%%     \item model files
+%%       \begin{itemize}
+%%         \item The files for the model.
+%%         \item e.g. *.pkl, *.pickle, *.mm, *.meta, *.data, *.index, *.model, etc..
+%%       \end{itemize}
+%%     \item config files
+%%       \begin{itemize}
+%%         \item The file containing configuration parameters important to the model.
+%%       \end{itemize}
+%%   \end{itemize}
+
+%% \end{frame}
+
+
+% =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+% =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+
+% \section{Additional Notes}
+
+
+%% \begin{frame}[fragile]{Blah}
+
+%%   Why I am not recommending using namespace packages
+
+%% \end{frame}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+% =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+% =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+
+\section{Conclusion}
+
+\begin{frame}[fragile]{Future of packaging in Data Science}
+
+  \textbf{We as a community should do a better job of creating general best practices on:}
+  \begin{itemize}
+    \item Delivering, sharing, and deploying solutions.
+    % \item Not another framework or proprietary service, please.
+  \end{itemize}
+  
+\end{frame}
+
+
+%% \begin{frame}[fragile]{Deep-dive}
+
+%%   For a deep-dive how-to:
+
+%%   \textbf{ml-pkg-post.blog.stevencutting.com}
+  
+%% \end{frame}
+
+
+
+% =-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+
+\begin{frame}[standout]
+
+  \textbf{Questions?}
+
+  ml-pkg-post.blog.stevencutting.com
+  @steven\_cutting
+  
+\end{frame}
+
+%% \begin{frame}{References}
+%%   Some references to showcase [allowframebreaks] \cite{knuth92,ConcreteMath,Simpson,Er01,greenwade93}
+%% \end{frame}
+
+
+% =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+% =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+
+
+\appendix
+
+
+% =-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+
+\subsection{Other important subjects}
+
+\begin{frame}[fragile]{Things to be aware of}
+
+  \begin{itemize}
+    \item These topics aren't directly related to packaging but they're very important because they concern the quality of the code within the package you are creating.
+    \item No one will trust to use your package if the contents do not meet certain expectations.
+   \end{itemize}
+
+\end{frame}
+
+\begin{frame}[fragile]{Things to be aware of: Virtualenv}
+
+  \begin{itemize}
+    \item Basically, `virtualenv` helps us to deal with multiple projects that have incompatible dependencies.
+    \item For example, if we have two different projects that require different versions of the same package, virtualenv can help us manage this. % [^29]
+  \end{itemize}
+  
+\end{frame}
+
+\begin{frame}[fragile]{Things to be aware of: Automated testing}
+
+  \begin{itemize}
+    \item Having an automated test suite for our software is important.
+    \item Helps greatly improve our confidence in our code.
+    \item PyTest is an excellent and approachable testing framework. % [^30] [^31]
+  \end{itemize}
+
+\end{frame}
+
+\begin{frame}[fragile]{Things to be aware of: Version control}
+
+  \begin{itemize}
+  \item Version control will help you to make modifications to your project in a more organized fashion, allowing you to better keep track of changes.
+  \item A popular option is git, but there are other options such as mercurial and subversion.
+  \end{itemize}
+  
+\end{frame}
+
+
+
+% =-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+
+%% \begin{frame}[fragile]{Backup slides}
+%%   Sometimes, it is useful to add slides at the end of your presentation to
+%%   refer to during audience questions.
+
+%%   The best way to do this is to include the \verb|appendixnumberbeamer|
+%%   package in your preamble and call \verb|\appendix| before your backup slides.
+
+%%   \themename will automatically turn off slide numbering and progress bars for
+%%   slides in the appendix.
+%% \end{frame}
+
+%% \begin{frame}[allowframebreaks]{References}
+
+%%   \bibliography{demo}
+%%   \bibliographystyle{abbrv}
+
+%% \end{frame}
+
+
+
+% =-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+
+\begin{frame}[standout]
+
+  \textbf{Questions?}
+
+  ml-pkg-post.blog.stevencutting.com
+  @steven\_cutting
+  
+\end{frame}
+
+
+% =-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+
+\begin{frame}{License}
+
+  % Get the source of this theme and the demo presentation from
+
+  % \begin{center}\url{github.com/matze/mtheme}\end{center}
+
+  This presentation is licensed under a
+  \href{https://creativecommons.org/licenses/by-nc-sa/4.0/}{Attribution-NonCommercial-ShareAlike 4.0 International License}.
+
+  \begin{center}
+    \ccbyncsa
+  \end{center}
+
+\end{frame}
+
+\end{document}
+
+
